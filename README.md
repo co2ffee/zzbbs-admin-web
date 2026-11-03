@@ -34,3 +34,20 @@ location ~ ^/(admin|common|static)/ { proxy_pass http://127.0.0.1:8080; }
 ## 页面
 
 仪表盘、话题、评论、文件、标签、用户、敏感词、系统设置、后台用户、角色、权限。
+
+## 发布与部署
+
+push 到 `main` 后，`.github/workflows/release-dist.yml` 会构建（`--base=/admin-ui/`）并把 `admin-ui.tar.gz` 发到固定 tag `deploy-latest` 的 release。
+
+服务器侧：把 `deploy/deploy-admin-ui.sh` 放到 `/home/pybbs/`，执行 `bash deploy-admin-ui.sh`（下载走 mihomo 代理，原子替换，保留上一版 `admin-ui.bak`）。
+
+nginx（`^~` 保证优先于正则）：
+
+```nginx
+location ^~ /admin-ui/ {
+    alias /home/pybbs/admin-ui/;
+    try_files $uri $uri/ /admin-ui/index.html;
+}
+```
+
+回滚：`cd /home/pybbs && rm -rf admin-ui && mv admin-ui.bak admin-ui`。完整的上线步骤见主仓库 `zzbbs` 的 `DEPLOY_RUNBOOK.md`。
