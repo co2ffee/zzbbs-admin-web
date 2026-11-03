@@ -35,6 +35,12 @@ location ~ ^/(admin|common|static)/ { proxy_pass http://127.0.0.1:8080; }
 
 仪表盘、话题、评论、文件、标签、用户、敏感词、系统设置、后台用户、角色、权限。
 
+## 开发注意
+
+- 接口返回的 `tinyint(1)` 字段（如话题/评论的 `deleted`）经 JDBC 会变成 `true/false`，不要用 `=== 1` 判断，用 `ui.tsx` 里的 `isDeleted()`。
+- 话题管理列表有意包含已删除的话题（显示“已删除”，可恢复/彻底删除）；仪表盘“今日新增”只统计未删除的。
+- 操作需要后端权限（`@RequiresPermissions`）；没权限时接口返回 `code=201`，前端用提示条显示（错误提示停留 8 秒）。新增后台功能时，后端要同时加对应的权限迁移。
+
 ## 发布与部署
 
 push 到 `main` 后，`.github/workflows/release-dist.yml` 会构建（`--base=/admin-ui/`）并把 `admin-ui.tar.gz` 发到固定 tag `deploy-latest` 的 release。
