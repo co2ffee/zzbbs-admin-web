@@ -23,7 +23,7 @@ export function NotifyProvider({ children }: { children: ReactNode }) {
   return (
     <Notify.Provider value={{ ok, fail, run }}>
       {children}
-      <Snackbar open={!!msg} autoHideDuration={3500} onClose={() => setMsg(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+      <Snackbar open={!!msg} autoHideDuration={msg?.s === 'error' ? 8000 : 3500} onClose={() => setMsg(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {msg ? <Alert severity={msg.s} onClose={() => setMsg(null)}>{msg.t}</Alert> : undefined}
       </Snackbar>
     </Notify.Provider>
