@@ -1,6 +1,6 @@
-# pybbs-admin-web
+# zzbbs-admin-web
 
-pybbs 后台管理前端：React + Vite + TypeScript + MUI（含 MUI X DataGrid）。纯静态产物，由 nginx 托管，不需要 Node 进程。
+zzbbs 后台管理前端：React + Vite + TypeScript + MUI（含 MUI X DataGrid）。纯静态产物，由 nginx 托管，不需要 Node 进程。
 
 对接后端 `/admin/**` JSON 接口，使用 `token` header 鉴权：登录页 `POST /admin/api/login`（表单参数 `username`/`password`/`code`），成功后把返回的 `token` 存在 `localStorage`，之后每个请求带 `token` header。验证码是 `/common/captcha`，依赖后端 session cookie，所以前端必须与后端同域（开发时用 Vite 代理，线上用 nginx 反向代理）。
 

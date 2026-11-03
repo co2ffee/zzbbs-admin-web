@@ -6,7 +6,7 @@ interface Ctx { admin: AdminUser | null; login: (a: AdminUser, token: string) =>
 const AuthCtx = createContext<Ctx>(null as any)
 export const useAuth = () => useContext(AuthCtx)
 
-const KEY = 'pybbs_admin_user'
+const KEY = 'zzbbs_admin_user'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminUser | null>(() => {
     try { return getToken() ? JSON.parse(localStorage.getItem(KEY) || 'null') : null } catch { return null }

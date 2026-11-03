@@ -36,7 +36,7 @@ export default function Layout() {
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar>
-          <Typography variant="h6" sx={{ flex: 1 }}>PyBBS 后台管理</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>ZZBBS 后台管理</Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>{admin?.username}</Typography>
           <Button color="inherit" onClick={() => { logout(); nav('/login') }}>退出</Button>
         </Toolbar>

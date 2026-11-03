@@ -1,5 +1,5 @@
 // 后端统一返回 { code, description, detail }，code=200 成功
-const TOKEN_KEY = 'pybbs_admin_token'
+const TOKEN_KEY = 'zzbbs_admin_token'
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || ''
 export const setToken = (t: string | null) =>
   t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY)
