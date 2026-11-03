@@ -1,0 +1,40 @@
+name: Build and release admin-ui dist
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # SPA 挂在 nginx 的 /admin-ui/ 路径下，所以构建时指定 base
+      - name: Build
+        run: npm run build -- --base=/admin-ui/
+
+      # 打包成固定文件名，服务器可以用稳定的下载地址拉取
+      - name: Package dist
+        run: tar -czf admin-ui.tar.gz -C dist .
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete deploy-latest --yes --cleanup-tag || true
+          gh release create deploy-latest admin-ui.tar.gz \
+            --title "Latest deploy build" \
+            --notes "Built from commit ${{ github.sha }}"
