@@ -41,6 +41,8 @@ export default function Files() {
     <>
       <PageTitle>文件管理</PageTitle>
       {d && <Typography sx={{ mb: 2 }} color="text.secondary">共 {d.totalCount} 个文件，总大小 {human(d.totalSize)}</Typography>}
+      {/* 后端每次要把整个存储桶的文件列表读一遍，通常要几秒；加载完成前表格是空的，明确提示一下，避免误以为没有文件 */}
+      {loading && !d && <Typography sx={{ mb: 2 }} color="text.secondary">正在读取存储桶文件列表，通常需要几秒钟…</Typography>}
       <Box>
         <DataGrid autoHeight getRowId={(r) => r.key} rows={d?.files ?? []} columns={columns as GridColDef[]} loading={loading}
           paginationMode="server" rowCount={d?.totalCount ?? 0} paginationModel={{ page: pageNo - 1, pageSize: 50 }} pageSizeOptions={[50]}
