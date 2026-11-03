@@ -6,6 +6,19 @@ import { FormDialog, PageTitle, useConfirm, useNotify } from '../ui'
 
 interface Role { id: number; name: string }
 interface Perm { id: number; name: string; value: string; pid: number }
+// 后端 add / edit 返回的 permissions 是“分组名 → 子权限列表”的对象（和旧页面一致），只有子权限可以勾选
+type Groups = Record<string, Perm[]>
+
+// 兼容：如果后端以后改成扁平数组，就按 pid 自己分组
+const toGroups = (raw: unknown): Groups => {
+  if (Array.isArray(raw)) {
+    const all = raw as Perm[]
+    const g: Groups = {}
+    all.filter((p) => p.pid === 0).forEach((p) => { g[p.name] = all.filter((c) => c.pid === p.id) })
+    return g
+  }
+  return (raw && typeof raw === 'object' ? raw : {}) as Groups
+}
 
 export default function Roles() {
   const { fail, run } = useNotify()
@@ -13,7 +26,7 @@ export default function Roles() {
   const [rows, setRows] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
   const [tick, setTick] = useState(0)
-  const [perms, setPerms] = useState<Perm[]>([])
+  const [groups, setGroups] = useState<Groups>({})
   const [edit, setEdit] = useState<{ id?: number; name: string; ids: number[] } | null>(null)
 
   useEffect(() => {
@@ -24,10 +37,10 @@ export default function Roles() {
   const open = async (id?: number) => {
     try {
       if (id) {
-        const d = await api.get<{ role: Role; currentPermissions: Perm[]; permissions: Perm[] }>('/admin/role/edit', { id })
-        setPerms(d.permissions); setEdit({ id, name: d.role.name, ids: d.currentPermissions.map((p) => p.id) })
+        const d = await api.get<{ role: Role; currentPermissions: Perm[]; permissions: unknown }>('/admin/role/edit', { id })
+        setGroups(toGroups(d.permissions)); setEdit({ id, name: d.role.name, ids: d.currentPermissions.map((p) => p.id) })
       } else {
-        setPerms(await api.get<Perm[]>('/admin/role/add')); setEdit({ name: '', ids: [] })
+        setGroups(toGroups(await api.get<unknown>('/admin/role/add'))); setEdit({ name: '', ids: [] })
       }
     } catch (e) { fail(e) }
   }
@@ -45,7 +58,6 @@ export default function Roles() {
       </Stack>) },
   ]
 
-  const parents = perms.filter((p) => p.pid === 0)
   const save = () => edit && run(async () => {
     await api.post(edit.id ? '/admin/role/edit' : '/admin/role/add', { id: edit.id, name: edit.name, permissionIds: edit.ids })
     setEdit(null); setTick((x) => x + 1)
@@ -58,12 +70,12 @@ export default function Roles() {
       {dialog}
       <FormDialog open={!!edit} title={edit?.id ? '编辑角色' : '新增角色'} onClose={() => setEdit(null)} onSubmit={save}>
         <TextField label="角色名" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} />
-        {parents.map((p) => {
-          const kids = perms.filter((c) => c.pid === p.id)
-          const all = kids.every((k) => edit?.ids.includes(k.id))
+        {Object.entries(groups).map(([group, kids]) => {
+          const all = kids.length > 0 && kids.every((k) => edit?.ids.includes(k.id))
           return (
-            <Box key={p.id}>
-              <FormControlLabel control={<Checkbox checked={all && kids.length > 0} onChange={(e) => toggle([p.id, ...kids.map((k) => k.id)], e.target.checked)} />} label={<Typography sx={{ fontWeight: "bold" }}>{p.name}</Typography>} />
+            <Box key={group}>
+              <FormControlLabel control={<Checkbox checked={all} onChange={(e) => toggle(kids.map((k) => k.id), e.target.checked)} />}
+                label={<Typography sx={{ fontWeight: 'bold' }}>{group}</Typography>} />
               <Box sx={{ pl: 4 }}>
                 {kids.map((k) => (
                   <FormControlLabel key={k.id} control={<Checkbox checked={!!edit?.ids.includes(k.id)} onChange={(e) => toggle([k.id], e.target.checked)} />} label={k.name} />

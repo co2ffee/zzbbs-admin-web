@@ -12,7 +12,7 @@ export default function Tags() {
   const [name, setName] = useState('')
   const [q, setQ] = useState({ name: '' })
   const list = usePagedList<Row>('/admin/tag/list', q)
-  const [edit, setEdit] = useState<(Row & { file?: File }) | null>(null)
+  const [edit, setEdit] = useState<(Row & { newIcon?: string; uploading?: boolean }) | null>(null)
 
   const columns: GridColDef<Row>[] = [
     { field: 'id', headerName: 'ID', width: 70 },
@@ -27,12 +27,27 @@ export default function Tags() {
       </Stack>) },
   ]
 
+  // 图标和用户端一样走预签名直传：先向后端要上传地址，浏览器直接 PUT 到存储桶，保存时只提交图标地址
+  const pickIcon = async (file?: File) => {
+    if (!file || !edit) return
+    setEdit((e) => e && { ...e, uploading: true })
+    await run(async () => {
+      const r = await api.get<{ uploadUrl: string; fileUrl: string }>('/admin/tag/upload_url')
+      let res: Response
+      try {
+        res = await fetch(r.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      } catch {
+        throw new Error('上传失败，请检查网络，或检查存储桶的跨域（CORS）设置')
+      }
+      if (!res.ok) throw new Error(`上传失败 (${res.status})`)
+      setEdit((e) => e && { ...e, newIcon: r.fileUrl, icon: r.fileUrl })
+    }, '图标已上传，保存后生效')
+    setEdit((e) => e && { ...e, uploading: false })
+  }
+
   const save = () => edit && run(async () => {
-    const fd = new FormData()
-    fd.append('id', String(edit.id)); fd.append('name', edit.name)
-    fd.append('description', edit.description ?? ''); fd.append('topicCount', String(edit.topicCount))
-    if (edit.file) fd.append('file', edit.file)
-    await api.upload('/admin/tag/edit', fd)
+    // newIcon 为空表示没换图标：不提交 icon，后端保持原图标
+    await api.post('/admin/tag/edit', { id: edit.id, name: edit.name, description: edit.description ?? '', topicCount: edit.topicCount, icon: edit.newIcon })
     setEdit(null); list.reload()
   }, '已保存')
 
@@ -49,9 +64,12 @@ export default function Tags() {
         <TextField label="名称" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} />
         <TextField label="描述" multiline minRows={2} value={edit?.description ?? ''} onChange={(e) => setEdit({ ...edit!, description: e.target.value })} />
         <TextField label="话题数" type="number" value={edit?.topicCount ?? 0} onChange={(e) => setEdit({ ...edit!, topicCount: Number(e.target.value) })} />
-        <Button component="label" variant="outlined">{edit?.file ? edit.file.name : '上传新图标（可选）'}
-          <input hidden type="file" accept="image/*" onChange={(e) => setEdit({ ...edit!, file: e.target.files?.[0] })} />
-        </Button>
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <Avatar variant="rounded" src={edit?.icon} sx={{ width: 40, height: 40 }}>{edit?.name?.[0]}</Avatar>
+          <Button component="label" variant="outlined" disabled={edit?.uploading}>{edit?.uploading ? '上传中…' : '上传新图标（可选）'}
+            <input hidden type="file" accept="image/*" onChange={(e) => { pickIcon(e.target.files?.[0]); e.target.value = '' }} />
+          </Button>
+        </Stack>
       </FormDialog>
     </>
   )

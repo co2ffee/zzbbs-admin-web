@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppBar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material'
+import { AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import ArticleIcon from '@mui/icons-material/Article'
 import CommentIcon from '@mui/icons-material/Comment'
@@ -32,27 +34,36 @@ export default function Layout() {
   const { admin, logout } = useAuth()
   const loc = useLocation()
   const nav = useNavigate()
+  const theme = useTheme()
+  // 窄屏（手机/小平板）侧边栏收成抽屉，否则常驻的 208px 侧栏会把内容挤出屏幕
+  const mobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [open, setOpen] = useState(false)
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar>
-          <Typography variant="h6" sx={{ flex: 1 }}>ZZBBS 后台管理</Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>{admin?.username}</Typography>
+          {mobile && (
+            <IconButton color="inherit" edge="start" onClick={() => setOpen(true)} sx={{ mr: 1 }} aria-label="菜单"><MenuIcon /></IconButton>
+          )}
+          <Typography variant="h6" noWrap sx={{ flex: 1 }}>ZZBBS 后台管理</Typography>
+          {!mobile && <Typography variant="body2" sx={{ mr: 2 }}>{admin?.username}</Typography>}
           <Button color="inherit" onClick={() => { logout(); nav('/login') }}>退出</Button>
         </Toolbar>
       </AppBar>
-      <Drawer variant="permanent" sx={{ width: W, '& .MuiDrawer-paper': { width: W, boxSizing: 'border-box' } }}>
+      <Drawer variant={mobile ? 'temporary' : 'permanent'} open={mobile ? open : true} onClose={() => setOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{ width: mobile ? 0 : W, flexShrink: 0, '& .MuiDrawer-paper': { width: W, boxSizing: 'border-box' } }}>
         <Toolbar />
         <List>
           {NAV.map(([to, label, icon]) => (
-            <ListItemButton key={to} component={RouterLink} to={to}
+            <ListItemButton key={to} component={RouterLink} to={to} onClick={() => setOpen(false)}
               selected={to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(to)}>
               <ListItemIcon>{icon}</ListItemIcon><ListItemText primary={label} />
             </ListItemButton>
           ))}
         </List>
       </Drawer>
-      <Box component="main" sx={{ flex: 1, p: 3, minWidth: 0 }}>
+      <Box component="main" sx={{ flex: 1, p: { xs: 1.5, md: 3 }, minWidth: 0 }}>
         <Toolbar />
         <Outlet />
       </Box>

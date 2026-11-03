@@ -27,11 +27,11 @@ export default function Dashboard() {
   return (
     <>
       <PageTitle>仪表盘（今日新增）</PageTitle>
-      <Box sx={grid('repeat(auto-fit, minmax(180px, 1fr))')}>
+      <Box sx={grid('repeat(auto-fit, minmax(130px, 1fr))')}>
         {stat('话题', d.topicCount)}{stat('评论', d.commentCount)}{stat('标签', d.tagCount)}{stat('用户', d.userCount)}
       </Box>
       <PageTitle>系统（{d.osName}）</PageTitle>
-      <Box sx={grid('repeat(auto-fit, minmax(220px, 1fr))')}>
+      <Box sx={grid('repeat(auto-fit, minmax(200px, 1fr))')}>
         {bar('内存使用', memPct, `${Math.round(d.usedMemory / 1024)}MB / ${Math.round(d.totalMemorySize / 1024)}MB`)}
         {bar('系统 CPU', pct(d.systemCpuLoad))}
         {bar('进程 CPU', pct(d.processCpuLoad))}
