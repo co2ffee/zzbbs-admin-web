@@ -47,6 +47,14 @@ nginx（`^~` 保证优先于正则）：
 location ^~ /admin-ui/ {
     alias /home/pybbs/admin-ui/;
     try_files $uri $uri/ /admin-ui/index.html;
+    # index.html 每次都向服务器确认有没有更新，否则部署新版后浏览器可能继续用旧的 JS
+    add_header Cache-Control "no-cache";
+}
+
+# 带 hash 的静态资源可以长期缓存
+location ^~ /admin-ui/assets/ {
+    alias /home/pybbs/admin-ui/assets/;
+    add_header Cache-Control "public, max-age=31536000, immutable";
 }
 ```
 
