@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Button, Chip, Stack, TextField } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
 import { api, fmtTime } from '../api'
-import { FormDialog, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
+import { FormDialog, isDeleted, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
 
-interface Row { id: number; title: string; username: string; inTime: string; good: boolean; top: boolean; deleted: number; commentCount: number; view: number }
+interface Row { id: number; title: string; username: string; inTime: string; good: boolean; top: boolean; deleted: boolean | number; commentCount: number; view: number }
 
 export default function Topics() {
   const { run } = useNotify()
@@ -31,14 +31,14 @@ export default function Topics() {
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', height: '100%' }}>
         {row.top && <Chip size="small" color="warning" label="置顶" />}
         {row.good && <Chip size="small" color="success" label="精华" />}
-        {row.deleted === 1 && <Chip size="small" color="error" label="已删除" />}
+        {isDeleted(row.deleted) && <Chip size="small" color="error" label="已删除" />}
       </Stack>) },
     { field: 'actions', headerName: '操作', width: 470, sortable: false, renderCell: ({ row }) => (
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', height: '100%' }}>
         <Button size="small" onClick={() => openEdit(row.id).catch((e) => run(() => Promise.reject(e)))}>编辑</Button>
         <Button size="small" onClick={() => act('good', row.id)}>{row.good ? '取消精华' : '加精'}</Button>
         <Button size="small" onClick={() => act('top', row.id)}>{row.top ? '取消置顶' : '置顶'}</Button>
-        {row.deleted === 1
+        {isDeleted(row.deleted)
           ? <>
             <Button size="small" onClick={() => act('restore', row.id)}>恢复</Button>
             <Button size="small" color="error" onClick={() => confirm('彻底删除后无法恢复，确定？', () => act('physical_delete', row.id))}>彻底删除</Button>

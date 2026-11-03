@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Button, Chip, Stack, TextField } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
 import { api, fmtTime } from '../api'
-import { FormDialog, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
+import { FormDialog, isDeleted, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
 
-interface Row { id: number; topicId: number; title?: string; content: string; username: string; inTime: string; status: boolean | number; deleted: number }
+interface Row { id: number; topicId: number; title?: string; content: string; username: string; inTime: string; status: boolean | number; deleted: boolean | number }
 
 export default function Comments() {
   const { run } = useNotify()
@@ -29,13 +29,13 @@ export default function Comments() {
     { field: 'state', headerName: '状态', width: 120, sortable: false, renderCell: ({ row }) => (
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', height: '100%' }}>
         {!row.status && <Chip size="small" color="warning" label="待审核" />}
-        {row.deleted === 1 && <Chip size="small" color="error" label="已删除" />}
+        {isDeleted(row.deleted) && <Chip size="small" color="error" label="已删除" />}
       </Stack>) },
     { field: 'actions', headerName: '操作', width: 260, sortable: false, renderCell: ({ row }) => (
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', height: '100%' }}>
         <Button size="small" onClick={() => openEdit(row.id).catch((e) => run(() => Promise.reject(e)))}>编辑</Button>
         {!row.status && <Button size="small" onClick={() => act('examine', row.id, '已审核')}>审核通过</Button>}
-        {row.deleted === 1
+        {isDeleted(row.deleted)
           ? <Button size="small" onClick={() => act('restore', row.id)}>恢复</Button>
           : <Button size="small" color="error" onClick={() => confirm('确定删除该评论？', () => act('delete', row.id))}>删除</Button>}
       </Stack>) },
