@@ -106,3 +106,6 @@ export const PageTitle = ({ children, actions }: { children: ReactNode; actions?
 )
 
 export { ApiError }
+
+// 后端的 deleted 字段可能是 boolean（JDBC 把 tinyint(1) 映射成 true/false）或 0/1
+export const isDeleted = (v: unknown) => v === true || v === 1 || v === '1'
