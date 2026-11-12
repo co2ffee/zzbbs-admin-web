@@ -1,0 +1,87 @@
+import { useState } from 'react'
+import { Avatar, Button, Checkbox, Chip, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
+import { GridColDef } from '@mui/x-data-grid'
+import { api } from '../api'
+import { FormDialog, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
+
+interface Row { id: number; name: string; image?: string; description?: string; score: number; stock: number; sort: number; enabled: boolean }
+interface Form { id?: number; name: string; image?: string; description: string; score: string; unlimited: boolean; stock: string; sort: string; enabled: boolean; newImage?: string; uploading?: boolean }
+
+const empty: Form = { name: '', description: '', score: '', unlimited: true, stock: '10', sort: '0', enabled: true }
+
+export default function ExchangeProducts() {
+  const { run } = useNotify()
+  const { confirm, dialog } = useConfirm()
+  const list = usePagedList<Row>('/admin/exchange/product/list')
+  const [edit, setEdit] = useState<Form | null>(null)
+
+  const columns: GridColDef<Row>[] = [
+    { field: 'id', headerName: 'ID', width: 70 },
+    { field: 'image', headerName: '图片', width: 80, sortable: false, renderCell: ({ row }) => <Avatar variant="rounded" src={row.image} sx={{ width: 36, height: 36, mt: 0.5 }}>{row.name[0]}</Avatar> },
+    { field: 'name', headerName: '名称', flex: 1, minWidth: 160 },
+    { field: 'score', headerName: '所需积分', width: 100 },
+    { field: 'stock', headerName: '库存', width: 90, valueFormatter: (v) => (Number(v) < 0 ? '不限量' : String(v)) },
+    { field: 'sort', headerName: '排序', width: 80 },
+    { field: 'enabled', headerName: '状态', width: 90, renderCell: ({ row }) => (row.enabled ? <Chip size="small" color="success" label="上架" /> : <Chip size="small" label="已下架" />) },
+    { field: 'actions', headerName: '操作', width: 160, sortable: false, renderCell: ({ row }) => (
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', height: '100%' }}>
+        <Button size="small" onClick={() => setEdit({ id: row.id, name: row.name, image: row.image, description: row.description ?? '', score: String(row.score), unlimited: row.stock < 0, stock: row.stock < 0 ? '10' : String(row.stock), sort: String(row.sort), enabled: row.enabled })}>编辑</Button>
+        <Button size="small" color="error" onClick={() => confirm(`删除商品「${row.name}」？已有的兑换记录不受影响。`, () => run(async () => { await api.get('/admin/exchange/product/delete', { id: row.id }); list.reload() }))}>删除</Button>
+      </Stack>) },
+  ]
+
+  // 图片和标签图标一样走预签名直传：先向后端要上传地址，浏览器直接 PUT 到存储桶，保存时只提交图片地址
+  const pickImage = async (file?: File) => {
+    if (!file || !edit) return
+    setEdit((e) => e && { ...e, uploading: true })
+    await run(async () => {
+      const r = await api.get<{ uploadUrl: string; fileUrl: string }>('/admin/exchange/product/upload_url')
+      let res: Response
+      try {
+        res = await fetch(r.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      } catch {
+        throw new Error('上传失败，请检查网络，或检查存储桶的跨域（CORS）设置')
+      }
+      if (!res.ok) throw new Error(`上传失败 (${res.status})`)
+      setEdit((e) => e && { ...e, newImage: r.fileUrl, image: r.fileUrl })
+    }, '图片已上传，保存后生效')
+    setEdit((e) => e && { ...e, uploading: false })
+  }
+
+  const save = () => edit && run(async () => {
+    // newImage 为空表示没换图片：不提交 image，后端保持原图
+    await api.post('/admin/exchange/product/save', {
+      id: edit.id, name: edit.name, description: edit.description, score: edit.score,
+      stock: edit.unlimited ? -1 : edit.stock, sort: edit.sort, enabled: edit.enabled, image: edit.newImage,
+    })
+    setEdit(null); list.reload()
+  }, '已保存')
+
+  const set = (patch: Partial<Form>) => setEdit((e) => e && { ...e, ...patch })
+
+  return (
+    <>
+      <PageTitle actions={<Button variant="contained" onClick={() => setEdit({ ...empty })}>新增商品</Button>}>兑换商品</PageTitle>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>用户在前台「积分兑换」页用积分兑换这里上架的商品；兑换记录在「兑换记录」里处理。</Typography>
+      <PagedGrid list={list} columns={columns as GridColDef[]} />
+      {dialog}
+      <FormDialog open={!!edit} title={edit?.id ? '编辑商品' : '新增商品'} onClose={() => setEdit(null)} onSubmit={save} submitting={edit?.uploading}>
+        <TextField label="商品名称" required value={edit?.name ?? ''} onChange={(e) => set({ name: e.target.value })} />
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <Avatar variant="rounded" src={edit?.image} sx={{ width: 72, height: 72 }}>{edit?.name?.[0]}</Avatar>
+          <Button component="label" variant="outlined" disabled={edit?.uploading}>{edit?.uploading ? '上传中…' : edit?.image ? '更换图片' : '上传图片'}
+            <input hidden type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0]); e.target.value = '' }} />
+          </Button>
+        </Stack>
+        <TextField label="商品简介（可选）" multiline minRows={2} value={edit?.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
+        <TextField label="兑换需要的积分" type="number" required value={edit?.score ?? ''} onChange={(e) => set({ score: e.target.value })} slotProps={{ htmlInput: { min: 1 } }} />
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <FormControlLabel control={<Checkbox checked={edit?.unlimited ?? true} onChange={(e) => set({ unlimited: e.target.checked })} />} label="不限量" />
+          <TextField label="库存" type="number" disabled={edit?.unlimited} value={edit?.stock ?? ''} onChange={(e) => set({ stock: e.target.value })} slotProps={{ htmlInput: { min: 0 } }} />
+        </Stack>
+        <TextField label="排序（数字大的排前面）" type="number" value={edit?.sort ?? '0'} onChange={(e) => set({ sort: e.target.value })} />
+        <FormControlLabel control={<Switch checked={edit?.enabled ?? true} onChange={(e) => set({ enabled: e.target.checked })} />} label="上架（关闭后用户端看不到）" />
+      </FormDialog>
+    </>
+  )
+}

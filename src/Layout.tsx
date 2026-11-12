@@ -13,6 +13,8 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import GroupsIcon from '@mui/icons-material/Groups'
 import KeyIcon from '@mui/icons-material/Key'
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import { useAuth } from './auth'
 
 const W = 208
@@ -23,6 +25,8 @@ export const NAV = [
   ['/files', '文件管理', <FolderIcon />],
   ['/tags', '标签管理', <LabelIcon />],
   ['/users', '用户管理', <PeopleIcon />],
+  ['/exchange-products', '兑换商品', <CardGiftcardIcon />],
+  ['/exchange-orders', '兑换记录', <ReceiptLongIcon />],
   ['/sensitive-words', '敏感词管理', <BlockIcon />],
   ['/system', '系统设置', <SettingsIcon />],
   ['/admin-users', '后台用户', <AdminPanelSettingsIcon />],
