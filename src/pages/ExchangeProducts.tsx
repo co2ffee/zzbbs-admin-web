@@ -5,7 +5,7 @@ import { api } from '../api'
 import { FormDialog, PageTitle, PagedGrid, useConfirm, useNotify, usePagedList } from '../ui'
 
 interface Row { id: number; name: string; image?: string; description?: string; score: number; stock: number; sort: number; enabled: boolean }
-interface Form { id?: number; name: string; image?: string; description: string; score: string; unlimited: boolean; stock: string; sort: string; enabled: boolean; newImage?: string; uploading?: boolean }
+interface Form { id?: number; name: string; image?: string; description: string; score: string; unlimited: boolean; stock: string; sort: string; enabled: boolean; newImage?: string; removeImage?: boolean; uploading?: boolean }
 
 const empty: Form = { name: '', description: '', score: '', unlimited: true, stock: '10', sort: '0', enabled: true }
 
@@ -43,7 +43,7 @@ export default function ExchangeProducts() {
         throw new Error('上传失败，请检查网络，或检查存储桶的跨域（CORS）设置')
       }
       if (!res.ok) throw new Error(`上传失败 (${res.status})`)
-      setEdit((e) => e && { ...e, newImage: r.fileUrl, image: r.fileUrl })
+      setEdit((e) => e && { ...e, newImage: r.fileUrl, image: r.fileUrl, removeImage: false })
     }, '图片已上传，保存后生效')
     setEdit((e) => e && { ...e, uploading: false })
   }
@@ -53,6 +53,8 @@ export default function ExchangeProducts() {
     await api.post('/admin/exchange/product/save', {
       id: edit.id, name: edit.name, description: edit.description, score: edit.score,
       stock: edit.unlimited ? -1 : edit.stock, sort: edit.sort, enabled: edit.enabled, image: edit.newImage,
+      // 点了“移除图片”且没有再上传新图：告诉后端去掉图片（不提交 image 只是“保持原图”）
+      removeImage: edit.removeImage && !edit.newImage ? true : undefined,
     })
     setEdit(null); list.reload()
   }, '已保存')
@@ -72,6 +74,8 @@ export default function ExchangeProducts() {
           <Button component="label" variant="outlined" disabled={edit?.uploading}>{edit?.uploading ? '上传中…' : edit?.image ? '更换图片' : '上传图片'}
             <input hidden type="file" accept="image/*" onChange={(e) => { pickImage(e.target.files?.[0]); e.target.value = '' }} />
           </Button>
+          {edit?.image && <Button color="error" disabled={edit?.uploading} onClick={() => set({ image: undefined, newImage: undefined, removeImage: true })}>移除图片</Button>}
+          {edit?.removeImage && !edit?.image && <Typography variant="caption" color="text.secondary">保存后商品不再显示图片</Typography>}
         </Stack>
         <TextField label="商品简介（可选）" multiline minRows={2} value={edit?.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
         <TextField label="兑换需要的积分" type="number" required value={edit?.score ?? ''} onChange={(e) => set({ score: e.target.value })} slotProps={{ htmlInput: { min: 1 } }} />
