@@ -9,6 +9,8 @@ import Topics from './pages/Topics'
 import Comments from './pages/Comments'
 import Files from './pages/Files'
 import Tags from './pages/Tags'
+import ExchangeProducts from './pages/ExchangeProducts'
+import ExchangeOrders from './pages/ExchangeOrders'
 import Users from './pages/Users'
 import SensitiveWords from './pages/SensitiveWords'
 import System from './pages/System'
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/files" element={<Files />} />
           <Route path="/tags" element={<Tags />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/exchange-products" element={<ExchangeProducts />} />
+          <Route path="/exchange-orders" element={<ExchangeOrders />} />
           <Route path="/sensitive-words" element={<SensitiveWords />} />
           <Route path="/system" element={<System />} />
           <Route path="/admin-users" element={<AdminUsers />} />
