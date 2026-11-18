@@ -1,0 +1,74 @@
+name: Auto merge Claude PRs
+
+# 云端 AI 的前端 PR：构建通过 + GitGuardian 通过后自动合并，并触发发布构建；
+# 服务器的 zzbbs-ui-autodeploy 定时器随后自动上线（约 10 分钟内）。人不在电脑前也能走完。
+#  - 只处理同仓库、分支名以 claude/ 开头、非 draft 的 PR（fork 的 PR 不处理）
+#  - 改了 .github/ 下文件的 PR 不自动合并（防止自动改工作流），需要人工合并
+#  - 停用：删除本文件，或把仓库 Actions 变量 AUTO_MERGE_DISABLED 设为 true
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  checks: read
+
+jobs:
+  build-check:
+    if: >-
+      vars.AUTO_MERGE_DISABLED != 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'claude/') &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  merge:
+    needs: build-check
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Refuse PRs that touch .github/
+        run: |
+          if gh pr diff "$PR" --repo "$GITHUB_REPOSITORY" --name-only | grep -q '^\.github/'; then
+            echo "PR 改了 .github/ 下的文件，不自动合并，需要人工合并"; exit 1
+          fi
+
+      - name: Wait for GitGuardian
+        run: |
+          for i in $(seq 1 40); do
+            c=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+                  --jq '[.check_runs[] | select(.name | test("GitGuardian"))][0] | "\(.status) \(.conclusion)"' 2>/dev/null || true)
+            echo "GitGuardian: ${c:-未出现}"
+            case "$c" in
+              "completed success"|"completed neutral") exit 0 ;;
+              completed*) echo "GitGuardian 未通过，不合并"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "10 分钟内没等到 GitGuardian 结果，不合并"; exit 1
+
+      - name: Merge
+        run: gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --merge --match-head-commit "$SHA"
+
+      # 用 GITHUB_TOKEN 合并不会触发 push 事件，所以手动触发发布构建（workflow_dispatch 不受此限制）
+      - name: Trigger release build
+        run: gh workflow run release-dist.yml --repo "$GITHUB_REPOSITORY" --ref main
