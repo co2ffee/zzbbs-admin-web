@@ -65,3 +65,5 @@ location ^~ /admin-ui/assets/ {
 ```
 
 回滚：`cd /home/pybbs && rm -rf admin-ui && mv admin-ui.bak admin-ui`。完整的上线步骤见主仓库 `zzbbs` 的 `DEPLOY_RUNBOOK.md`。
+
+<!-- auto-merge selftest -->
