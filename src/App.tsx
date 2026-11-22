@@ -11,6 +11,7 @@ import Files from './pages/Files'
 import Tags from './pages/Tags'
 import ExchangeProducts from './pages/ExchangeProducts'
 import ExchangeOrders from './pages/ExchangeOrders'
+import MarketItems from './pages/MarketItems'
 import Users from './pages/Users'
 import SensitiveWords from './pages/SensitiveWords'
 import System from './pages/System'
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/users" element={<Users />} />
           <Route path="/exchange-products" element={<ExchangeProducts />} />
           <Route path="/exchange-orders" element={<ExchangeOrders />} />
+          <Route path="/market-items" element={<MarketItems />} />
           <Route path="/sensitive-words" element={<SensitiveWords />} />
           <Route path="/system" element={<System />} />
           <Route path="/admin-users" element={<AdminUsers />} />
